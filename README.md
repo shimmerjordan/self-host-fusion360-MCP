@@ -4,6 +4,10 @@
 
 [简体中文](README.zh-CN.md) · [Full manual](docs/manual.en.md) · [Tool reference](docs/TOOLS.md) · [Troubleshooting](docs/TROUBLESHOOTING.en.md)
 
+![An L-bracket built end-to-end in Fusion 360 through a Claude conversation via this MCP](docs/images/bracket.png)
+
+<sub>An L-bracket built entirely from a Claude conversation through this MCP — base + wall + boolean join + fillets + 4 mounting holes + mass check + export. See [scripts/demo_conversation.py](scripts/demo_conversation.py).</sub>
+
 It unifies the best ideas from the community Fusion-MCP projects into one well-documented, foolproof package: **bilingual docs (中/英), a Windows one-click installer, Docker one-command run, mm-first units, a shared auto-generated token, ~100 tools (plus a generic-API escape hatch for full coverage), auto-create-document, and a `doctor` that tells you exactly what's wrong.** No Fusion subscription required — it works with the free personal-use license too.
 
 > ✅ **Validated against a real Fusion 360 install** (Jan 2026 build, Python 3.14): a 57-step coverage test and a full bolt-circle-flange build pass end-to-end, with numerically-verified mass/volume. See [Development & testing](#development--testing).

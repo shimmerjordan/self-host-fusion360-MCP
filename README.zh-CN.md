@@ -4,6 +4,10 @@
 
 [English](README.md) · [完整手册](docs/manual.zh-CN.md) · [工具参考](docs/TOOLS.md) · [故障排查](docs/TROUBLESHOOTING.zh-CN.md)
 
+![通过本 MCP，由 Claude 对话端到端在 Fusion 360 中建出的 L 形支架](docs/images/bracket.png)
+
+<sub>完全由一段 Claude 对话通过本 MCP 建出的 L 形支架——底板 + 立板 + 布尔合并 + 圆角 + 4 个安装孔 + 质量核算 + 导出。见 [scripts/demo_conversation.py](scripts/demo_conversation.py)。</sub>
+
 它把社区各个 Fusion-MCP 项目的优点整合进一个**文档齐全、防呆**的包里：**中英双语文档、Windows 一键安装、Docker 一条命令、毫米优先、自动生成的共享令牌、约 100 个工具(外加全覆盖的通用 API 直通)、自动建文档、以及能精确告诉你哪里出错的 `doctor`。** 无需 Fusion 订阅——免费的个人使用版也能用。
 
 > ✅ **已在真实 Fusion 360 上验证**（2026 年 1 月版本，Python 3.14）：一套 57 步全覆盖测试 + 一个完整的螺栓圆法兰建模都端到端通过，质量/体积经数值核对无误。详见[开发与测试](#开发与测试)。
