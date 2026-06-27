@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fusion 360 MCP — 配置面板</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --card2:#172033; --ink:#e2e8f0; --mut:#94a3b8;
+          --acc:#38bdf8; --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b; --bd:#334155; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 system-ui,"Segoe UI",sans-serif; }
+  header { padding:20px 24px; border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:12px; }
+  header h1 { font-size:18px; margin:0; } header .sub { color:var(--mut); font-size:13px; }
+  main { max-width:880px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:18px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:18px 20px; }
+  .card h2 { margin:0 0 4px; font-size:15px; } .card .desc { color:var(--mut); font-size:12px; margin:0 0 14px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--mut); }
+  input[type=text], input[type=number], select { background:var(--card2); color:var(--ink);
+    border:1px solid var(--bd); border-radius:8px; padding:8px 10px; font:inherit; min-width:120px; }
+  input[type=checkbox] { width:16px; height:16px; }
+  button { background:var(--acc); color:#04263a; border:0; border-radius:8px; padding:8px 14px;
+    font:inherit; font-weight:600; cursor:pointer; }
+  button.sec { background:var(--card2); color:var(--ink); border:1px solid var(--bd); font-weight:500; }
+  button:active { transform:translateY(1px); }
+  pre { background:#0b1220; border:1px solid var(--bd); border-radius:8px; padding:12px; overflow:auto;
+    white-space:pre-wrap; word-break:break-all; font:12px/1.5 ui-monospace,Consolas,monospace; }
+  .pill { padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+  .pill.ok{background:rgba(34,197,94,.15);color:var(--ok);} .pill.bad{background:rgba(239,68,68,.15);color:var(--bad);}
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 16px; font-size:13px; }
+  .kv b { color:var(--mut); font-weight:500; }
+  .note { color:var(--warn); font-size:12px; margin-top:8px; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--card2);
+    border:1px solid var(--bd); padding:10px 16px; border-radius:8px; opacity:0; transition:.2s; pointer-events:none; }
+  .toast.show { opacity:1; }
+  a { color:var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fusion 360 MCP</h1><span class="sub">本地配置面板 · Local config dashboard</span>
+</header>
+<main>
+
+  <!-- STATUS -->
+  <section class="card">
+    <h2>状态 · Status</h2>
+    <p class="desc">桥接、版本、工具数 · Bridge, version, tool count</p>
+    <div id="status">加载中… / loading…</div>
+    <div class="row" style="margin-top:12px"><button class="sec" onclick="loadStatus()">刷新 · Refresh</button></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="card">
+    <h2>加载项设置 · Add-in settings</h2>
+    <p class="desc">写入 ~/.fusion-mcp/addin.json · 改动需在 Fusion 里 Stop→Run 重载</p>
+    <div class="row">
+      <label>端口 Port<input type="number" id="s_port"></label>
+      <label>绑定 Bind<input type="text" id="s_bind"></label>
+      <label>超时(秒) Timeout<input type="number" id="s_timeout"></label>
+      <label>自动建文档 Auto-create<input type="checkbox" id="s_autocreate"></label>
+      <label>允许任意代码 Arbitrary code<input type="checkbox" id="s_arbitrary"></label>
+    </div>
+    <div class="row" style="margin-top:12px"><button onclick="saveSettings()">保存 · Save</button></div>
+    <div class="note" id="settings_note"></div>
+  </section>
+
+  <!-- TOKEN -->
+  <section class="card">
+    <h2>共享令牌 · Shared token</h2>
+    <p class="desc">~/.fusion-mcp/token · 服务器与加载项共用 · shared by server & add-in</p>
+    <div class="row">
+      <code id="tok" style="background:#0b1220;padding:8px 10px;border-radius:8px;border:1px solid var(--bd)">…</code>
+      <button class="sec" onclick="toggleTok()">显示/隐藏 · Reveal</button>
+      <button class="sec" onclick="copyTok()">复制 · Copy</button>
+      <button class="sec" onclick="regenTok()">重新生成 · Regenerate</button>
+    </div>
+  </section>
+
+  <!-- CONNECTORS -->
+  <section class="card">
+    <h2>AI 连接器 · AI connectors</h2>
+    <p class="desc">为你的 AI 客户端生成配置 · 未来可加更多 AI · Generate config for your AI client</p>
+    <div class="row">
+      <label>客户端 Client<select id="conn"></select></label>
+      <button onclick="genSnippet()">生成 · Generate</button>
+      <button class="sec" id="applyBtn" style="display:none" onclick="applyClaude()">一键写入 Claude Desktop · Apply</button>
+    </div>
+    <p class="desc" id="conn_path" style="margin-top:10px"></p>
+    <pre id="snippet" style="display:none"></pre>
+    <div class="row" id="snippet_actions" style="display:none"><button class="sec" onclick="copySnippet()">复制 · Copy</button></div>
+    <div class="note" id="conn_note"></div>
+  </section>
+
+  <!-- REMOTE -->
+  <section class="card">
+    <h2>远端 / HTTP · Remote MCP</h2>
+    <p class="desc">通过 HTTP 传输远程访问(需 pip install 'fusion-mcp[http]') · Remote access over HTTP</p>
+    <div class="row">
+      <label>HTTP host<input type="text" id="r_host" value="0.0.0.0"></label>
+      <label>HTTP port<input type="number" id="r_port" value="8765"></label>
+      <button onclick="genRemote()">生成 · Generate</button>
+    </div>
+    <pre id="remote" style="display:none"></pre>
+    <div class="note">公网暴露请务必保留令牌并设置防火墙。本地桥连接自动绕过系统代理(trust_env=False)。<br>
+      Exposing publicly: keep the token, firewall the port. Local bridge bypasses system proxy.</div>
+  </section>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__SESSION_TOKEN__";
+let TOK_FULL = "", TOK_SHOWN = false;
+
+async function api(path, method="GET", body=null) {
+  const opt = { method, headers: { "X-Fusion-UI-Token": TOKEN } };
+  if (body) { opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
+  const r = await fetch(path, opt);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || ("HTTP "+r.status));
+  return data;
+}
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1600); }
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+async function loadStatus(){
+  const el = document.getElementById("status");
+  try {
+    const s = await api("/api/status");
+    const b = s.bridge || {};
+    const pill = b.reachable ? '<span class="pill ok">桥已连接 reachable</span>'
+                             : '<span class="pill bad">桥未连接 unreachable</span>';
+    el.innerHTML = pill + '<div class="kv" style="margin-top:12px">'
+      + '<b>UI 版本 version</b><span>'+esc(s.version)+'</span>'
+      + (b.reachable ? '<b>加载项 add-in</b><span>'+esc(b.version||"?")+'</span>'
+                      +'<b>工具/算子 ops</b><span>'+(b.ops??b.op_count??"?")+'</span>'
+                      +'<b>任意代码 arbitrary</b><span>'+(b.allow_arbitrary_code?"on":"off")+'</span>'
+                     : '<b>错误 error</b><span>'+esc(b.error||"")+'</span>')
+      + '<b>加载项地址 addin_url</b><span>'+esc(s.server.addin_url)+'</span>'
+      + '<b>令牌 token</b><span>'+(s.token_present?"已配置 present":"缺失 missing")+'</span>'
+      + '</div>';
+  } catch(e){ el.innerHTML = '<span class="pill bad">面板错误</span> '+esc(e.message); }
+}
+
+async function loadSettings(){
+  const s = await api("/api/settings");
+  document.getElementById("s_port").value = s.port;
+  document.getElementById("s_bind").value = s.bind;
+  document.getElementById("s_timeout").value = s.request_timeout;
+  document.getElementById("s_autocreate").checked = !!s.auto_create_document;
+  document.getElementById("s_arbitrary").checked = !!s.allow_arbitrary_code;
+}
+async function saveSettings(){
+  try{
+    const body = {
+      port: +document.getElementById("s_port").value,
+      bind: document.getElementById("s_bind").value,
+      request_timeout: +document.getElementById("s_timeout").value,
+      auto_create_document: document.getElementById("s_autocreate").checked,
+      allow_arbitrary_code: document.getElementById("s_arbitrary").checked,
+    };
+    const r = await api("/api/settings","POST",body);
+    document.getElementById("settings_note").textContent = r.note;
+    toast("已保存 · Saved");
+  }catch(e){ toast("错误: "+e.message); }
+}
+
+async function loadToken(){
+  const t = await api("/api/token");
+  TOK_FULL = t.token; TOK_SHOWN=false;
+  document.getElementById("tok").textContent = t.masked || "(none)";
+}
+function toggleTok(){ TOK_SHOWN=!TOK_SHOWN;
+  document.getElementById("tok").textContent = TOK_SHOWN ? (TOK_FULL||"(none)") : (TOK_FULL?TOK_FULL.slice(0,4)+"…"+TOK_FULL.slice(-4):"(none)"); }
+async function copyTok(){ await navigator.clipboard.writeText(TOK_FULL); toast("令牌已复制 · Copied"); }
+async function regenTok(){ if(!confirm("重新生成令牌?需重启加载项与客户端。/ Regenerate token? Restart add-in & clients."))return;
+  const r=await api("/api/token/regenerate","POST",{}); TOK_FULL=r.token; document.getElementById("tok").textContent=TOK_FULL; toast("已生成 · Regenerated"); }
+
+let CONN_META = {};
+async function loadConnectors(){
+  const d = await api("/api/connectors");
+  const sel = document.getElementById("conn"); sel.innerHTML="";
+  d.connectors.filter(c=>c.id!=="remote-http").forEach(c=>{
+    CONN_META[c.id]=c; const o=document.createElement("option"); o.value=c.id; o.textContent=c.name; sel.appendChild(o);
+  });
+}
+async function genSnippet(){
+  try{
+    const id = document.getElementById("conn").value;
+    const r = await api("/api/connectors/snippet","POST",{id});
+    showSnippet(r);
+    document.getElementById("applyBtn").style.display = r.can_apply ? "" : "none";
+  }catch(e){ toast("错误: "+e.message); }
+}
+function showSnippet(r){
+  document.getElementById("conn_path").textContent = r.config_path ? ("→ "+r.config_path) : "";
+  const pre=document.getElementById("snippet"); pre.textContent=r.snippet; pre.style.display="";
+  document.getElementById("snippet_actions").style.display="";
+  document.getElementById("conn_note").textContent = r.notes||"";
+}
+async function copySnippet(){ await navigator.clipboard.writeText(document.getElementById("snippet").textContent); toast("已复制 · Copied"); }
+async function applyClaude(){
+  if(!confirm("合并写入 Claude Desktop 配置?(会自动备份)/ Merge into Claude Desktop config? (auto-backup)"))return;
+  try{ const r=await api("/api/connectors/apply","POST",{name:"fusion360"});
+    toast(r.result.action+" · "+r.result.path); }
+  catch(e){ toast("错误: "+e.message); }
+}
+async function genRemote(){
+  try{
+    const r = await api("/api/connectors/snippet","POST",{id:"remote-http",
+      http_host:document.getElementById("r_host").value, http_port:+document.getElementById("r_port").value});
+    const pre=document.getElementById("remote"); pre.textContent=r.snippet; pre.style.display="";
+  }catch(e){ toast("错误: "+e.message); }
+}
+
+loadStatus(); loadSettings(); loadToken(); loadConnectors();
+</script>
+</body>
+</html>

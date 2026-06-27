@@ -1,0 +1,33 @@
+# One-command run of the MCP SERVER layer.
+#   docker compose up -d
+#
+# Prerequisites on the HOST (cannot be containerized):
+#   - Fusion 360 running with the Fusion360MCP add-in started.
+#   - Set FUSION_MCP_TOKEN below (copy from ~/.fusion-mcp/token) so the
+#     container authenticates to the host add-in. Put it in a .env file:
+#       FUSION_MCP_TOKEN=xxxxxxxx
+#
+# Then add a custom (remote/HTTP) connector in Claude pointing at:
+#   http://localhost:8765/mcp
+
+services:
+  fusion-mcp:
+    build: .
+    image: self-host-fusion360-mcp:latest
+    container_name: fusion-mcp
+    ports:
+      - "8765:8765"
+    environment:
+      FUSION_MCP_TRANSPORT: http
+      FUSION_MCP_HTTP_HOST: 0.0.0.0
+      FUSION_MCP_HTTP_PORT: "8765"
+      # host.docker.internal -> the host machine where Fusion runs.
+      FUSION_ADDIN_URL: ${FUSION_ADDIN_URL:-http://host.docker.internal:9000}
+      # Paste the host token (from ~/.fusion-mcp/token) into .env.
+      FUSION_MCP_TOKEN: ${FUSION_MCP_TOKEN:-}
+      # Set to 1 to run without Fusion (demo/CI).
+      FUSION_MCP_MOCK: ${FUSION_MCP_MOCK:-0}
+    # Makes host.docker.internal resolve on Linux (no-op/automatic on Desktop).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

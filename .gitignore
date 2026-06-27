@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets & local config — NEVER commit the shared token
+.env
+*.token
+.fusion-mcp/
+token
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local artifacts
+*.log
+exports/
+screenshots/
+
+# Third-party reference clones (studied, not shipped)
+reference/

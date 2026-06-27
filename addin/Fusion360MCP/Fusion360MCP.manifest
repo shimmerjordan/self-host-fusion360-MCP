@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "addin",
+    "id": "f7c2e6a0-1b3d-4c9e-9a7b-7e2d5f1a9c30",
+    "author": "self-host-fusion360-mcp",
+    "description": {
+        "": "Self-hosted MCP bridge. Lets Claude (and any MCP client) drive Fusion 360 through a local, token-authenticated HTTP server. 自托管 MCP 桥，让 Claude 通过本地带令牌鉴权的 HTTP 服务驱动 Fusion 360。"
+    },
+    "version": "0.4.0",
+    "runOnStartup": true,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fusion-mcp"
+version = "0.4.0"
+description = "Self-hosted, unified Fusion 360 MCP server — drive Autodesk Fusion 360 from Claude. 自托管统一的 Fusion 360 MCP 服务器。"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "self-host-fusion360-mcp contributors" }]
+keywords = ["fusion360", "mcp", "claude", "cad", "autodesk", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Manufacturing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+
+# Runtime deps kept deliberately small. The Fusion ADD-IN uses ONLY the stdlib
+# (it runs inside Fusion's bundled Python where pip is unavailable); these deps
+# are for the MCP SERVER process only.
+dependencies = [
+    "mcp>=1.27,<2",   # official Model Context Protocol SDK (bundles FastMCP); v2 is alpha
+    "httpx>=0.27",    # HTTP client to the in-Fusion add-in bridge
+]
+
+[project.optional-dependencies]
+# `pip install "fusion-mcp[http]"` enables the streamable-http transport (Docker/remote).
+http = ["uvicorn>=0.30", "starlette>=0.37"]
+# `pip install "fusion-mcp[dev]"` for the test suite.
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+fusion-mcp = "fusion_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/self-host-fusion360-mcp"
+Documentation = "https://github.com/your-org/self-host-fusion360-mcp/tree/main/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["server/fusion_mcp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"server/fusion_mcp/webui/index.html" = "fusion_mcp/webui/index.html"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["server", "install"]
+addopts = "-q"
