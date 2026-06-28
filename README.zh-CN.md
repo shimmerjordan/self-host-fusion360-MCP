@@ -95,6 +95,8 @@ Claude Desktop、Claude Code、Cursor、VS Code、通用客户端或远端/HTTP 
 **生成或一键写入** MCP 配置。以后接入新 AI,只需在 `fusion_mcp.clientconfig.CONNECTORS`
 里加一条目。
 
+![fusion-mcp webui 本地配置面板](docs/images/webui.png)
+
 ---
 
 ## 配置

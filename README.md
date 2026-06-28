@@ -95,6 +95,8 @@ regenerate the token, and **generate or one-click-apply** MCP client config for
 Claude Desktop, Claude Code, Cursor, VS Code, a generic client, or a remote/HTTP
 connector. Adding a future AI = one entry in `fusion_mcp.clientconfig.CONNECTORS`.
 
+![The fusion-mcp webui local config dashboard](docs/images/webui.png)
+
 ---
 
 ## Configuration
