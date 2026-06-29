@@ -26,7 +26,7 @@ def delete(ctx, params):
     body = ctx.get_body(require(params, "body", (int, str)))
     name = body.name
     body.deleteMe()
-    return {"deleted": name, "remaining_bodies": ctx.root().bRepBodies.count}
+    return {"deleted": name, "remaining_bodies": ctx.target().bRepBodies.count}
 
 
 @op("body.move", summary="Translate a body by (dx,dy,dz) millimetres.")
@@ -40,7 +40,7 @@ def move(ctx, params):
     transform.translation = adsk.core.Vector3D.create(
         ctx.mm2cm(dx), ctx.mm2cm(dy), ctx.mm2cm(dz)
     )
-    move_feats = ctx.root().features.moveFeatures
+    move_feats = ctx.target().features.moveFeatures
     move_input = move_feats.createInput(entities, transform)
     move_feats.add(move_input)
     return {"name": body.name, "moved_mm": [dx, dy, dz]}
@@ -56,7 +56,7 @@ def combine(ctx, params):
     operation = ctx.feature_operation(op_name)
     keep_tools = bool(optional(params, "keep_tools", False, types=bool))
 
-    combines = ctx.root().features.combineFeatures
+    combines = ctx.target().features.combineFeatures
     combine_input = combines.createInput(target, ctx.collection(tool_bodies))
     combine_input.operation = operation
     combine_input.isKeepToolBodies = keep_tools
@@ -65,5 +65,5 @@ def combine(ctx, params):
         "feature": "combine",
         "operation": op_name,
         "target": target.name,
-        "remaining_bodies": ctx.root().bRepBodies.count,
+        "remaining_bodies": ctx.target().bRepBodies.count,
     }

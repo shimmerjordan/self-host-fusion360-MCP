@@ -42,7 +42,7 @@ def _edges_collection(ctx, body, edges_ref):
 
 
 def _feature_result(ctx, feature, kind):
-    bodies = ctx.root().bRepBodies
+    bodies = ctx.target().bRepBodies
     out = {"feature": kind, "body_count": bodies.count}
     try:
         out["feature_name"] = feature.name
@@ -59,7 +59,7 @@ def extrude(ctx, params):
     direction = optional(params, "direction", "positive", types=str).lower()
     profiles = _profiles_from_sketch(ctx, sk, params.get("profile", "all"))
 
-    ext_feats = ctx.root().features.extrudeFeatures
+    ext_feats = ctx.target().features.extrudeFeatures
     ext_input = ext_feats.createInput(profiles, operation)
     if direction == "symmetric":
         ext_input.setDistanceExtent(True, ctx.len_mm(distance))
@@ -79,7 +79,7 @@ def revolve(ctx, params):
     operation = ctx.feature_operation(optional(params, "operation", "new", types=str))
     profiles = _profiles_from_sketch(ctx, sk, params.get("profile", "all"))
 
-    rev_feats = ctx.root().features.revolveFeatures
+    rev_feats = ctx.target().features.revolveFeatures
     rev_input = rev_feats.createInput(profiles, axis, operation)
     rev_input.setAngleExtent(False, ctx.angle_deg(angle))
     feature = rev_feats.add(rev_input)
@@ -91,7 +91,7 @@ def fillet(ctx, params):
     body = ctx.get_body(require(params, "body", (int, str)))
     radius = float(require(params, "radius", (int, float)))
     edges = _edges_collection(ctx, body, params.get("edges", "all"))
-    fillet_feats = ctx.root().features.filletFeatures
+    fillet_feats = ctx.target().features.filletFeatures
     fillet_input = fillet_feats.createInput()
     fillet_input.edgeSetInputs.addConstantRadiusEdgeSet(edges, ctx.len_mm(radius), True)
     feature = fillet_feats.add(fillet_input)
@@ -103,7 +103,7 @@ def chamfer(ctx, params):
     body = ctx.get_body(require(params, "body", (int, str)))
     distance = float(require(params, "distance", (int, float)))
     edges = _edges_collection(ctx, body, params.get("edges", "all"))
-    chamfer_feats = ctx.root().features.chamferFeatures
+    chamfer_feats = ctx.target().features.chamferFeatures
     chamfer_input = chamfer_feats.createInput2()
     chamfer_input.chamferEdgeSets.addEqualDistanceChamferEdgeSet(
         edges, ctx.len_mm(distance), True
@@ -117,7 +117,7 @@ def shell(ctx, params):
     body = ctx.get_body(require(params, "body", (int, str)))
     thickness = float(require(params, "thickness", (int, float)))
     entities = ctx.collection([body])
-    shell_feats = ctx.root().features.shellFeatures
+    shell_feats = ctx.target().features.shellFeatures
     shell_input = shell_feats.createInput(entities, False)
     shell_input.insideThickness = ctx.len_mm(thickness)
     feature = shell_feats.add(shell_input)
@@ -133,7 +133,7 @@ def rectangular_pattern(ctx, params):
     entities = ctx.collection([body])
     import adsk.core
 
-    pat_feats = ctx.root().features.rectangularPatternFeatures
+    pat_feats = ctx.target().features.rectangularPatternFeatures
     pat_input = pat_feats.createInput(
         entities,
         axis,
@@ -154,7 +154,7 @@ def circular_pattern(ctx, params):
     entities = ctx.collection([body])
     import adsk.core
 
-    pat_feats = ctx.root().features.circularPatternFeatures
+    pat_feats = ctx.target().features.circularPatternFeatures
     pat_input = pat_feats.createInput(entities, axis)
     pat_input.quantity = adsk.core.ValueInput.createByReal(count)
     pat_input.totalAngle = ctx.angle_deg(angle)
@@ -168,7 +168,7 @@ def mirror(ctx, params):
     body = ctx.get_body(require(params, "body", (int, str)))
     plane = ctx.get_plane(optional(params, "plane", "xy", types=str))
     entities = ctx.collection([body])
-    mirror_feats = ctx.root().features.mirrorFeatures
+    mirror_feats = ctx.target().features.mirrorFeatures
     mirror_input = mirror_feats.createInput(entities, plane)
     feature = mirror_feats.add(mirror_input)
     return _feature_result(ctx, feature, "mirror")
@@ -182,8 +182,8 @@ def sweep(ctx, params):
     profile = _profiles_from_sketch(ctx, prof_sk, params.get("profile", 0))
     if path_sk.sketchCurves.count == 0:
         raise OpError(ERR_NOT_FOUND, "Path sketch '{}' has no curves.".format(path_sk.name))
-    path = ctx.root().features.createPath(path_sk.sketchCurves.item(0), True)
-    sweep_feats = ctx.root().features.sweepFeatures
+    path = ctx.target().features.createPath(path_sk.sketchCurves.item(0), True)
+    sweep_feats = ctx.target().features.sweepFeatures
     sweep_input = sweep_feats.createInput(profile, path, operation)
     feature = sweep_feats.add(sweep_input)
     return _feature_result(ctx, feature, "sweep")
@@ -195,7 +195,7 @@ def loft(ctx, params):
     if len(sketch_refs) < 2:
         raise OpError(ERR_INVALID_PARAMS, "loft needs at least 2 sketches.")
     operation = ctx.feature_operation(optional(params, "operation", "new", types=str))
-    loft_feats = ctx.root().features.loftFeatures
+    loft_feats = ctx.target().features.loftFeatures
     loft_input = loft_feats.createInput(operation)
     for ref in sketch_refs:
         sk = ctx.get_sketch(ref)
@@ -212,7 +212,7 @@ def hole(ctx, params):
     depth = optional(params, "depth", None, types=(int, float))
     through = bool(optional(params, "through_all", depth is None, types=bool))
     plane = ctx.get_plane(params.get("plane", "xy"))
-    root = ctx.root()
+    root = ctx.target()
     sk = root.sketches.add(plane)
     sk.sketchCurves.sketchCircles.addByCenterRadius(ctx.point_mm(x, y), ctx.mm2cm(diameter / 2.0))
     ext = root.features.extrudeFeatures
@@ -233,7 +233,7 @@ def scale(ctx, params):
 
     body = ctx.get_body(require(params, "body", (int, str)))
     factor = float(require(params, "factor", (int, float)))
-    root = ctx.root()
+    root = ctx.target()
     scale_feats = root.features.scaleFeatures
     sf_input = scale_feats.createInput(
         ctx.collection([body]),
@@ -276,7 +276,7 @@ def draft(ctx, params):
         faces = [body.faces.item(i) for i in range(body.faces.count)]
     else:
         faces = [body.faces.item(i) for i in face_ref]
-    drafts = ctx.root().features.draftFeatures
+    drafts = ctx.target().features.draftFeatures
     draft_input = drafts.createInput(faces, plane, True)
     draft_input.setSingleAngle(False, adsk.core.ValueInput.createByString("{} deg".format(angle)))
     feature = drafts.add(draft_input)
@@ -291,7 +291,7 @@ def split_body(ctx, params):
         tool = ctx.get_body(params["tool_body"])
     else:
         tool = ctx.get_plane(optional(params, "plane", "xy", types=str))
-    splits = ctx.root().features.splitBodyFeatures
+    splits = ctx.target().features.splitBodyFeatures
     split_input = splits.createInput(body, tool, extend)
     feature = splits.add(split_input)
     return _feature_result(ctx, feature, "split_body")
@@ -303,7 +303,7 @@ def split_face(ctx, params):
     plane = ctx.get_plane(optional(params, "plane", "xy", types=str))
     extend = bool(optional(params, "extend_tool", True, types=bool))
     faces = _faces_collection(ctx, body, params.get("faces", "all"))
-    splits = ctx.root().features.splitFaceFeatures
+    splits = ctx.target().features.splitFaceFeatures
     split_input = splits.createInput(faces, plane, extend)
     feature = splits.add(split_input)
     return _feature_result(ctx, feature, "split_face")
@@ -316,7 +316,7 @@ def offset_faces(ctx, params):
     body = ctx.get_body(require(params, "body", (int, str)))
     distance = float(require(params, "distance", (int, float)))
     faces = _faces_collection(ctx, body, params.get("faces", "all"))
-    offsets = ctx.root().features.offsetFeatures
+    offsets = ctx.target().features.offsetFeatures
     offset_input = offsets.createInput(
         faces, ctx.len_mm(distance), adsk.fusion.FeatureOperations.NewBodyFeatureOperation
     )
@@ -335,7 +335,7 @@ def thread(ctx, params):
     modeled = bool(optional(params, "modeled", True, types=bool))
     thread_type = optional(params, "thread_type", "ISO Metric profile", types=str)
 
-    threads = ctx.root().features.threadFeatures
+    threads = ctx.target().features.threadFeatures
     query = threads.threadDataQuery
     try:
         diameter_cm = face.geometry.radius * 2.0

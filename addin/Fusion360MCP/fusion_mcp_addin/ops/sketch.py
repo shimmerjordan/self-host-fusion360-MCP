@@ -16,7 +16,7 @@ from ..bridge.protocol import ERR_INVALID_PARAMS, ERR_NOT_FOUND, OpError
 
 
 def _sketch_index(ctx, sk):
-    sketches = ctx.root().sketches
+    sketches = ctx.target().sketches
     for i in range(sketches.count):
         if sketches.item(i) == sk:
             return i
@@ -29,7 +29,7 @@ def _resolve_sketch(ctx, params):
         return ctx.get_sketch(ref)
     ctx.ensure_design()  # auto-create a document if none is open
     plane = ctx.get_plane(params.get("plane", "xy"))
-    return ctx.root().sketches.add(plane)
+    return ctx.target().sketches.add(plane)
 
 
 def _result(ctx, sk):
@@ -44,7 +44,7 @@ def _result(ctx, sk):
 def create(ctx, params):
     ctx.ensure_design()  # auto-create a document if none is open
     plane = ctx.get_plane(params.get("plane", "xy"))
-    sk = ctx.root().sketches.add(plane)
+    sk = ctx.target().sketches.add(plane)
     name = optional(params, "name", None, types=str)
     if name:
         sk.name = name

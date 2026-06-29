@@ -9,7 +9,7 @@ from ..bridge.protocol import ERR_INVALID_PARAMS, OpError
 
 @op("query.list_bodies", summary="List solid/surface bodies with volume and bounds.", readonly=True)
 def list_bodies(ctx, params):
-    bodies = ctx.root().bRepBodies
+    bodies = ctx.target().bRepBodies
     return {
         "count": bodies.count,
         "bodies": [body_summary(bodies.item(i), i) for i in range(bodies.count)],
@@ -31,7 +31,7 @@ def list_components(ctx, params):
 
 @op("query.list_sketches", summary="List sketches with their profile counts.", readonly=True)
 def list_sketches(ctx, params):
-    sketches = ctx.root().sketches
+    sketches = ctx.target().sketches
     return {
         "count": sketches.count,
         "sketches": [
@@ -48,7 +48,7 @@ def list_sketches(ctx, params):
 
 @op("query.bounding_box", summary="Overall bounding box of the whole design (mm).", readonly=True)
 def bounding_box(ctx, params):
-    bodies = ctx.root().bRepBodies
+    bodies = ctx.target().bRepBodies
     if bodies.count == 0:
         return {"empty": True}
     import adsk.core
@@ -88,7 +88,7 @@ def get_body(ctx, params):
     ref = require(params, "body", (int, str))
     body = ctx.get_body(ref)
     idx = -1
-    bodies = ctx.root().bRepBodies
+    bodies = ctx.target().bRepBodies
     for i in range(bodies.count):
         if bodies.item(i) == body:
             idx = i

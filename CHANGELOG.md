@@ -3,6 +3,39 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.0] - 2026-06-29
+
+### Added — active component (keep multi-part models in ONE document)
+- `assembly.activate_component` / `assembly.active_component`, and
+  `assembly.create_component` now takes `activate` (default true). Once a
+  component is active, **all** build + entity-lookup ops (sketch, feature,
+  primitive, construction, surface, body, and the `query.list_*` views) target
+  that component instead of the root — so a model with many parts lives in a
+  single document, each part isolated in its own component, without disturbing
+  existing bodies. Default target is still the root component (fully backwards
+  compatible). `primitive.*` also accept a per-call `component` override.
+- `_delta` body counting now spans **all** components, so adding a body inside a
+  sub-component is reported correctly.
+
+### Added — auto-dismiss blocking dialogs (external guard)
+- An **external guard process** (`bridge/dialog_guard.py`) auto-closes modal
+  dialogs (save / recover / server-verification / stray message boxes) that
+  otherwise freeze Fusion's main thread and stall every op. It must be a separate
+  process: such modals hold the Python GIL, freezing any *in-process* watchdog
+  (and even the HTTP server) for the whole time the dialog is up. The add-in
+  launches it automatically (Windows). It acts when an MCP op is stuck (a busy
+  flag the dispatcher writes) after a short grace, or when a dialog title matches
+  a configurable nuisance allowlist. Dismissal is WM_CLOSE→Esc→Enter via
+  PostMessage (no foreground focus needed; WM_CLOSE = Cancel/[X], so no save, no
+  Save-As loop, no data loss). New settings: `dialog_grace_allow`, `dialog_titles`.
+
+### Added — self-reload (no manual Stop→Run)
+- `system.restart` does a full **in-process** stop → re-import all modules from
+  disk → start, applying changes to bridge/`__init__` code without a manual Fusion
+  Stop→Run. It is self-bootstrapping (registers its main-thread restart channel on
+  `system.reload`), so even brand-new restart wiring activates over RPC. The
+  teardown is deferred off the request thread (avoids deadlocking the HTTP server).
+
 ## [0.4.0] - 2026-06-27
 
 ### Added — local web config dashboard

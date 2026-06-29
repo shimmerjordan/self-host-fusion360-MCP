@@ -80,6 +80,27 @@ def _type_name(types):
     return types.__name__
 
 
+def _find_component(design, name):
+    """Find a Component by name anywhere in the design (root or sub-component),
+    or None. Component names are unique within a design."""
+    if name is None:
+        return None
+    if name == design.rootComponent.name or str(name).lower() == "root":
+        return design.rootComponent
+    comps = design.allComponents
+    try:
+        comp = comps.itemByName(name)
+        if comp is not None:
+            return comp
+    except Exception:
+        pass
+    for i in range(comps.count):
+        c = comps.item(i)
+        if c.name == name:
+            return c
+    return None
+
+
 # --- context -----------------------------------------------------------------
 class Ctx:
     """Convenience accessors built on Fusion's main thread."""
@@ -134,6 +155,33 @@ class Ctx:
     def ensure_root(self):
         return self.ensure_design().rootComponent
 
+    def target(self):
+        """The component that build + entity-lookup ops work in, so multi-part
+        models stay in ONE document with each part in its own component, without
+        disturbing existing bodies. It is the sticky *active* component set via
+        ``assembly.activate_component`` / ``assembly.create_component`` (stored in
+        RUNTIME), or the root component (default — identical to the old
+        behaviour). Auto-creates a design if none is open; a stale/closed target
+        silently falls back to root rather than erroring."""
+        design = self.ensure_design()
+        name = RUNTIME.get("target_component")
+        if name:
+            comp = _find_component(design, name)
+            if comp is not None:
+                return comp
+        return design.rootComponent
+
+    def build_target(self, params=None):
+        """Like :meth:`target`, but a per-call ``component`` name in ``params``
+        overrides the sticky active component (used by primitive.* ops)."""
+        if params:
+            name = params.get("component")
+            if name:
+                comp = _find_component(self.ensure_design(), name)
+                if comp is not None:
+                    return comp
+        return self.target()
+
     def units(self):
         return self.design().fusionUnitsManager
 
@@ -163,7 +211,7 @@ class Ctx:
 
     # entity lookup
     def get_body(self, ref):
-        bodies = self.root().bRepBodies
+        bodies = self.target().bRepBodies
         if isinstance(ref, bool):  # guard: bool is an int subclass
             raise OpError(ERR_INVALID_PARAMS, "body reference must be an index or name")
         if isinstance(ref, int):
@@ -181,7 +229,7 @@ class Ctx:
         raise OpError(ERR_INVALID_PARAMS, "body must be an index (int) or name (str).")
 
     def get_sketch(self, ref):
-        sketches = self.root().sketches
+        sketches = self.target().sketches
         if isinstance(ref, int):
             if ref < 0 or ref >= sketches.count:
                 raise OpError(
@@ -199,7 +247,7 @@ class Ctx:
     def get_plane(self, ref):
         """Accept 'xy'/'xz'/'yz', a construction-plane index, a planar face
         reference {"body": ref, "face": index}, or default xy."""
-        root = self.root()
+        root = self.target()
         if ref is None:
             return root.xYConstructionPlane
         if isinstance(ref, dict):
@@ -246,7 +294,7 @@ class Ctx:
         return face
 
     def get_axis(self, ref):
-        root = self.root()
+        root = self.target()
         key = str(ref).strip().lower()
         mapping = {
             "x": root.xConstructionAxis,

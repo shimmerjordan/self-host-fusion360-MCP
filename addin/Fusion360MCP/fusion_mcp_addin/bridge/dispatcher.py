@@ -41,12 +41,14 @@ class _CustomEventHandler(adsk.core.CustomEventHandler):
 
 
 class Dispatcher:
-    def __init__(self, app, registry, request_timeout=30, readonly_ops=None):
+    def __init__(self, app, registry, request_timeout=30, readonly_ops=None, busy_file=None):
         self._app = app
         self._registry = registry
         self._timeout = request_timeout
         self._readonly = set(readonly_ops or [])
         self._pending = {}
+        self._active = 0          # ops currently executing on the main thread
+        self._busy_file = busy_file  # external dialog_guard reads this to know an op is in flight
         self._lock = threading.Lock()
         self._custom_event = None
         self._handler = None
@@ -88,6 +90,13 @@ class Dispatcher:
     def refresh_readonly(self, readonly_ops):
         """Update the readonly-op set (used after a hot reload)."""
         self._readonly = set(readonly_ops or [])
+
+    def is_busy(self):
+        """True if any op is queued OR currently executing on the main thread (used by
+        the dialog watchdog to decide whether to intervene — covers both a modal that
+        blocks queued ops and a modal raised mid-op)."""
+        with self._lock:
+            return bool(self._pending) or self._active > 0
 
     def _timer_loop(self):
         while not self._stop.wait(0.25):
@@ -156,6 +165,9 @@ class Dispatcher:
 
         box = job["box"]
         op = job["op"]
+        with self._lock:
+            self._active += 1
+        self._set_busy_flag(True)  # before the op runs: a modal it raises blocks us here
         try:
             self._terminate_active_command()
             ctx = Ctx()
@@ -183,16 +195,42 @@ class Dispatcher:
                 "detail": detail,
             }
         finally:
+            with self._lock:
+                self._active -= 1
+                idle = self._active == 0
+            if idle:
+                self._set_busy_flag(False)
             job["event"].set()
+
+    def _set_busy_flag(self, busy):
+        """Touch/remove the busy flag file the external dialog_guard polls. Best
+        effort — the guard also has a title allowlist, so a missed flag is not
+        fatal."""
+        if not self._busy_file:
+            return
+        try:
+            if busy:
+                with open(self._busy_file, "w", encoding="utf-8") as fh:
+                    fh.write(str(uuid.uuid4()))
+            else:
+                import os
+                os.remove(self._busy_file)
+        except Exception:
+            pass
 
     # ---- helpers -----------------------------------------------------------
     def _snapshot(self, ctx):
-        """Cheap state snapshot for before/after deltas (body count)."""
+        """Cheap state snapshot for before/after deltas (total body count across
+        ALL components, so a body added into a sub-component is still counted)."""
         try:
             design = adsk.fusion.Design.cast(ctx.app.activeProduct)
             if design is None:
                 return None
-            return {"bodies": design.rootComponent.bRepBodies.count}
+            comps = design.allComponents
+            total = 0
+            for i in range(comps.count):
+                total += comps.item(i).bRepBodies.count
+            return {"bodies": total}
         except Exception:
             return None
 

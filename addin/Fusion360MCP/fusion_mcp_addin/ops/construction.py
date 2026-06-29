@@ -7,7 +7,7 @@ from ._common import op, optional, require
 def offset_plane(ctx, params):
     base = ctx.get_plane(optional(params, "base", "xy", types=str))
     offset = float(require(params, "offset", (int, float)))
-    planes = ctx.root().constructionPlanes
+    planes = ctx.target().constructionPlanes
     plane_input = planes.createInput()
     plane_input.setByOffset(base, ctx.len_mm(offset))
     plane = planes.add(plane_input)

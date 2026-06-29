@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fusion-mcp"
-version = "0.4.0"
+version = "0.5.0"
 description = "Self-hosted, unified Fusion 360 MCP server — drive Autodesk Fusion 360 from Claude. 自托管统一的 Fusion 360 MCP 服务器。"
 readme = "README.md"
 requires-python = ">=3.10"

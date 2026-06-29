@@ -18,14 +18,9 @@ def _name_body(body, params):
 
 
 def _build_target(ctx, params):
-    """Return the Component to build into: a named component occurrence if the
-    'component' param is given, else the (ensured) root component."""
-    comp_name = params.get("component")
-    if comp_name:
-        from .assembly import _find_occurrence
-
-        return _find_occurrence(ctx.ensure_root() and ctx.root(), comp_name).component
-    return ctx.ensure_root()
+    """Return the Component to build into: a per-call ``component`` name overrides,
+    else the sticky active component (assembly.activate_component), else root."""
+    return ctx.build_target(params)
 
 
 @op("primitive.box", summary="Create a box width(x) x depth(y) x height(z) mm, centered on the XY origin, rising in +Z.")
@@ -59,7 +54,7 @@ def cylinder(ctx, params):
     h = float(require(params, "height", (int, float)))
     cx = float(optional(params, "x", 0.0, types=(int, float)))
     cy = float(optional(params, "y", 0.0, types=(int, float)))
-    root = ctx.ensure_root()
+    root = _build_target(ctx, params)
     sketch = root.sketches.add(root.xYConstructionPlane)
     sketch.sketchCurves.sketchCircles.addByCenterRadius(
         ctx.point_mm(cx, cy), ctx.mm2cm(radius)
@@ -80,7 +75,7 @@ def sphere(ctx, params):
         radius = float(params["diameter"]) / 2.0
     else:
         radius = float(require(params, "radius", (int, float)))
-    root = ctx.ensure_root()
+    root = _build_target(ctx, params)
     # A HALF-disk whose flat (diameter) edge lies ON the X axis, revolved 360 deg
     # around X -> a sphere. A full circle would straddle the axis and Fusion
     # rejects it ("profile intersects the revolution axis").

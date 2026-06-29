@@ -14,13 +14,13 @@ def thicken(ctx, params):
     faces = adsk.core.ObjectCollection.create()
     for i in range(body.faces.count):
         faces.add(body.faces.item(i))
-    thickens = ctx.root().features.thickenFeatures
+    thickens = ctx.target().features.thickenFeatures
     thicken_input = thickens.createInput(
         faces, ctx.len_mm(thickness), False,
         adsk.fusion.FeatureOperations.NewBodyFeatureOperation, symmetric,
     )
     feature = thickens.add(thicken_input)
-    return {"feature": "thicken", "body_count": ctx.root().bRepBodies.count}
+    return {"feature": "thicken", "body_count": ctx.target().bRepBodies.count}
 
 
 @op("surface.ruled", summary="Create a ruled surface from a body edge, extending by distance mm.")
@@ -32,10 +32,10 @@ def ruled(ctx, params):
         from ..bridge.protocol import ERR_NOT_FOUND, OpError
 
         raise OpError(ERR_NOT_FOUND, "Edge index {} out of range.".format(edge_index))
-    ruled_feats = ctx.root().features.ruledSurfaceFeatures
+    ruled_feats = ctx.target().features.ruledSurfaceFeatures
     ruled_input = ruled_feats.createInput(body.edges.item(edge_index), ctx.len_mm(distance))
     ruled_feats.add(ruled_input)
-    return {"feature": "ruled", "body_count": ctx.root().bRepBodies.count}
+    return {"feature": "ruled", "body_count": ctx.target().bRepBodies.count}
 
 
 @op("surface.patch", summary="Patch a closed sketch profile into a surface.")
@@ -45,12 +45,12 @@ def patch(ctx, params):
         from ..bridge.protocol import ERR_NOT_FOUND, OpError
 
         raise OpError(ERR_NOT_FOUND, "Sketch '{}' has no closed profile to patch.".format(sk.name))
-    patches = ctx.root().features.patchFeatures
+    patches = ctx.target().features.patchFeatures
     patch_input = patches.createInput(
         sk.profiles.item(0), adsk.fusion.FeatureOperations.NewBodyFeatureOperation
     )
     patches.add(patch_input)
-    return {"feature": "patch", "body_count": ctx.root().bRepBodies.count}
+    return {"feature": "patch", "body_count": ctx.target().bRepBodies.count}
 
 
 @op("surface.stitch", summary="Stitch surface bodies into one (tolerance mm).")
@@ -58,9 +58,9 @@ def stitch(ctx, params):
     refs = require(params, "bodies", list)
     tolerance = float(optional(params, "tolerance", 0.1, types=(int, float)))
     coll = ctx.collection([ctx.get_body(r) for r in refs])
-    stitches = ctx.root().features.stitchFeatures
+    stitches = ctx.target().features.stitchFeatures
     stitch_input = stitches.createInput(
         coll, ctx.len_mm(tolerance), adsk.fusion.FeatureOperations.NewBodyFeatureOperation
     )
     stitches.add(stitch_input)
-    return {"feature": "stitch", "body_count": ctx.root().bRepBodies.count}
+    return {"feature": "stitch", "body_count": ctx.target().bRepBodies.count}

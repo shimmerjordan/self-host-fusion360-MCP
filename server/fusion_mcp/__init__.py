@@ -6,4 +6,4 @@ natively (stdio) or in a container (streamable-http), and a ``--mock`` mode lets
 it run with no Fusion at all (for tests, CI, and demos).
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

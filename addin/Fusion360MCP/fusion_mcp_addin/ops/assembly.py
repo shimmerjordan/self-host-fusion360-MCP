@@ -8,7 +8,7 @@ assembly.move_component to position a component before/after jointing.
 import adsk.core
 import adsk.fusion
 
-from ._common import op, optional, require
+from ._common import RUNTIME, op, optional, require, _find_component
 from ..bridge.protocol import ERR_INVALID_PARAMS, ERR_NOT_FOUND, OpError
 
 _JOINT_TYPES = {
@@ -52,13 +52,48 @@ def _find_occurrence(root, name):
     raise OpError(ERR_NOT_FOUND, "No component/occurrence named '{}'.".format(name))
 
 
-@op("assembly.create_component", summary="Create a new (empty) component as an occurrence in the design.")
+@op("assembly.create_component", summary="Create a new (empty) component in the CURRENT document and (by default) make it the active build target so later sketch/feature ops go into it. activate=false to just create.")
 def create_component(ctx, params):
     name = require(params, "name", str)
+    activate = bool(optional(params, "activate", True, types=bool))
     root = ctx.ensure_root()
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     occ.component.name = name
-    return {"created": name, "occurrence": occ.name}
+    if activate:
+        RUNTIME["target_component"] = occ.component.name
+    return {"created": name, "occurrence": occ.name, "active": activate}
+
+
+@op(
+    "assembly.activate_component",
+    summary="Set the active build target component: subsequent sketch/feature/primitive ops build INTO it (keeping a multi-part model in one document). Pass name='root' (or omit) to reset to the root component.",
+    idempotent=True,
+)
+def activate_component(ctx, params):
+    name = optional(params, "name", "", types=str)
+    design = ctx.design()
+    if not name or str(name).lower() == "root":
+        RUNTIME.pop("target_component", None)
+        return {"active": design.rootComponent.name, "is_root": True}
+    comp = _find_component(design, name)
+    if comp is None:
+        raise OpError(ERR_NOT_FOUND, "No component named '{}'. Use assembly.list_occurrences.".format(name))
+    RUNTIME["target_component"] = comp.name
+    return {"active": comp.name, "is_root": comp is design.rootComponent}
+
+
+@op(
+    "assembly.active_component",
+    summary="Report which component build ops currently target (the active build component, or root).",
+    readonly=True,
+)
+def active_component(ctx, params):
+    design = ctx.design()
+    name = RUNTIME.get("target_component")
+    comp = _find_component(design, name) if name else None
+    if comp is None:
+        return {"active": design.rootComponent.name, "is_root": True}
+    return {"active": comp.name, "is_root": comp is design.rootComponent}
 
 
 @op("assembly.list_occurrences", summary="List component occurrences (name, grounded, visible).", readonly=True)
