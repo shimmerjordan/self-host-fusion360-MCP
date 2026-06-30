@@ -46,6 +46,27 @@ def list_documents(ctx, params):
 
 
 @op(
+    "document.close_others",
+    summary="Close every open document EXCEPT the active one, discarding unsaved changes. Destructive.",
+    destructive=True,
+)
+def close_others(ctx, params):
+    app = ctx.app
+    active = app.activeDocument
+    docs = [app.documents.item(i) for i in range(app.documents.count)]
+    closed = 0
+    for d in docs:
+        if d is active:
+            continue
+        try:
+            d.close(False)   # False = do not save changes
+            closed += 1
+        except Exception:
+            pass
+    return {"closed": closed, "remaining": app.documents.count, "kept": active.name if active else None}
+
+
+@op(
     "document.save",
     summary="Save the active document (must already have been saved once).",
     idempotent=True,
