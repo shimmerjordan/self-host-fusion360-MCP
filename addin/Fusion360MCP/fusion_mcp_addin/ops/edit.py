@@ -36,17 +36,46 @@ def redo(ctx, params):
     return {"redone": True}
 
 
-@op("edit.delete_all", summary="Delete every timeline feature (clears the design). Destructive.", destructive=True)
+@op("edit.delete_all", summary="Fully clear the active design: timeline features + any leftover bodies/sketches/construction geometry. Destructive.", destructive=True)
 def delete_all(ctx, params):
-    timeline = ctx.design().timeline
+    design = ctx.design()
+    root = design.rootComponent
     deleted = 0
+
+    # 1) delete all timeline features (reverse order avoids dependency errors)
+    timeline = design.timeline
     for i in range(timeline.count - 1, -1, -1):
         try:
             timeline.item(i).deleteMe()
             deleted += 1
         except Exception:
             pass
-    return {"deleted": deleted, "remaining": ctx.design().timeline.count}
+
+    # 2) delete anything the timeline didn't (base-feature/direct bodies, stray
+    #    sketches, construction geometry) so the design is truly empty — otherwise
+    #    a later fillet/feature hits ASM_BL_CANNOT_REORDER on the leftovers.
+    def _purge(coll):
+        n = 0
+        for i in range(coll.count - 1, -1, -1):
+            try:
+                coll.item(i).deleteMe()
+                n += 1
+            except Exception:
+                pass
+        return n
+
+    deleted += _purge(root.bRepBodies)
+    deleted += _purge(root.sketches)
+    deleted += _purge(root.constructionPlanes)
+    deleted += _purge(root.constructionAxes)
+    deleted += _purge(root.constructionPoints)
+
+    return {
+        "deleted": deleted,
+        "remaining_bodies": root.bRepBodies.count,
+        "remaining_sketches": root.sketches.count,
+        "timeline": design.timeline.count,
+    }
 
 
 def _find_timeline_entity(design, name):

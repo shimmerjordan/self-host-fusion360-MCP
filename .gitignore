@@ -32,6 +32,8 @@ Thumbs.db
 *.log
 exports/
 screenshots/
+# Part/artifact generation scripts (local only, not shipped)
+parts/
 
 # Third-party reference clones (studied, not shipped)
 reference/
