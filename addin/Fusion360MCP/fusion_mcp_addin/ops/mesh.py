@@ -111,3 +111,78 @@ def import_mesh(ctx, params):
         "moved": moved,
         "offset_mm": [dx, dy, dz],
     }
+
+
+def _enum_member(enum_cls_name, needle):
+    cls = getattr(adsk.fusion, enum_cls_name, None)
+    if cls is None:
+        return None, []
+    names = [n for n in dir(cls) if not n.startswith("_") and n not in ("classType", "cast")]
+    for n in names:
+        if needle.lower() in n.lower():
+            return getattr(cls, n), names
+    return None, names
+
+
+@op(
+    "mesh.convert",
+    summary="Convert a mesh body to a solid BRep body (Fusion 'Convert Mesh'). "
+    "params: mesh (index/name, default = last mesh body); method faceted|prismatic|organic "
+    "(default faceted — keeps every triangle as a planar face, no extension needed).",
+    params=[
+        {"name": "mesh", "type": "int|str", "required": False},
+        {"name": "method", "type": "str", "required": False},
+    ],
+)
+def convert_mesh(ctx, params):
+    comp = ctx.build_target(params)
+    meshes = comp.meshBodies
+    if meshes.count == 0:
+        raise OpError(ERR_NOT_FOUND, "No mesh bodies in component '{}'.".format(comp.name))
+    ref = params.get("mesh", meshes.count - 1)
+    if isinstance(ref, bool) or not isinstance(ref, (int, str)):
+        raise OpError(ERR_INVALID_PARAMS, "mesh must be an index (int) or name (str).")
+    if isinstance(ref, int):
+        if ref < 0 or ref >= meshes.count:
+            raise OpError(ERR_NOT_FOUND, "Mesh index {} out of range (0..{}).".format(ref, meshes.count - 1))
+        mb = meshes.item(ref)
+    else:
+        mb = meshes.itemByName(ref)
+        if mb is None:
+            raise OpError(ERR_NOT_FOUND, "No mesh body named '{}'.".format(ref))
+
+    method = str(optional(params, "method", "faceted", types=str)).lower()
+    member, names = _enum_member("MeshConvertMethodTypes", method)
+    if member is None:
+        raise OpError(ERR_INVALID_PARAMS, "Unknown convert method '{}'. Available: {}".format(method, names))
+
+    feats = comp.features.meshConvertFeatures
+    before = comp.bRepBodies.count
+    try:
+        inp = feats.createInput([mb])
+    except Exception:  # noqa: BLE001 — older builds want an ObjectCollection
+        coll = adsk.core.ObjectCollection.create()
+        coll.add(mb)
+        inp = feats.createInput(coll)
+    inp.meshConvertMethodType = member
+    try:
+        feature = feats.add(inp)
+    except Exception as exc:  # noqa: BLE001
+        raise OpError(ERR_INVALID_PARAMS, "Mesh convert failed.", str(exc))
+
+    new_bodies = []
+    for i in range(before, comp.bRepBodies.count):
+        b = comp.bRepBodies.item(i)
+        new_bodies.append({
+            "index": i,
+            "name": b.name,
+            "is_solid": b.isSolid,
+            "faces": b.faces.count,
+            "volume_mm3": b.volume * 1000.0,
+        })
+    return {
+        "converted": mb.name,
+        "method": method,
+        "feature": getattr(feature, "name", None),
+        "new_bodies": new_bodies,
+    }
