@@ -47,6 +47,13 @@ def register(mcp, client):
         return client.call("query.list_faces", {"body": body})
 
     @mcp.tool(annotations=anno(readonly=True))
+    def fusion_list_edges(body: Union[int, str]) -> dict:
+        """List a body's edges (index, length mm, start/mid/end points mm, curve type,
+        adjacent face indices). Pick edges by position for fusion_fillet /
+        fusion_chamfer (their `edges` list takes these indices)."""
+        return client.call("query.list_edges", {"body": body})
+
+    @mcp.tool(annotations=anno(readonly=True))
     def fusion_physical_properties(body: Union[int, str, None] = None) -> dict:
         """Mass (g), volume (mm³), area (mm²), density, and center of mass for a body
         (by index/name) or the whole design if omitted."""

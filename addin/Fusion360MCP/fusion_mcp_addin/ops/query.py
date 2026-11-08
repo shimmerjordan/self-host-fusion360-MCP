@@ -135,6 +135,46 @@ def list_faces(ctx, params):
     return {"count": faces.count, "faces": out}
 
 
+@op("query.list_edges", summary="List a body's edges (index, length, start/mid/end points, curve type, adjacent faces) for edge selection (fillet/chamfer).", readonly=True)
+def list_edges(ctx, params):
+    body = ctx.get_body(require(params, "body", (int, str)))
+    face_index = {}
+    for i in range(body.faces.count):
+        try:
+            face_index[body.faces.item(i).tempId] = i
+        except Exception:
+            pass
+    edges = body.edges
+    out = []
+    for i in range(edges.count):
+        e = edges.item(i)
+        entry = {"index": i}
+        try:
+            entry["length_mm"] = e.length * 10.0
+        except Exception:
+            pass
+        try:
+            ev = e.evaluator
+            ok, t0, t1 = ev.getParameterExtents()
+            pts = []
+            for t in (t0, (t0 + t1) / 2.0, t1):
+                ok, p = ev.getPointAtParameter(t)
+                pts.append([p.x * 10.0, p.y * 10.0, p.z * 10.0])
+            entry["start_mm"], entry["mid_mm"], entry["end_mm"] = pts
+        except Exception:
+            pass
+        try:
+            entry["curve"] = str(e.geometry.curveType).split(".")[-1]
+        except Exception:
+            pass
+        try:
+            entry["faces"] = [face_index.get(e.faces.item(k).tempId) for k in range(e.faces.count)]
+        except Exception:
+            pass
+        out.append(entry)
+    return {"count": edges.count, "edges": out}
+
+
 @op("query.physical_properties", summary="Mass/volume/area/center-of-mass of a body (or whole design).", readonly=True)
 def physical_properties(ctx, params):
     ref = params.get("body")

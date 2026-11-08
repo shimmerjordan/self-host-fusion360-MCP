@@ -45,11 +45,17 @@ def delete_all(ctx, params):
     # 1) delete all timeline features (reverse order avoids dependency errors)
     timeline = design.timeline
     for i in range(timeline.count - 1, -1, -1):
-        try:
-            timeline.item(i).deleteMe()
-            deleted += 1
-        except Exception:
-            pass
+        item = timeline.item(i)
+        # TimelineObject itself may not delete; its feature (item.entity) does
+        for target in (item, getattr(item, "entity", None)):
+            if target is None:
+                continue
+            try:
+                if target.deleteMe() is not False:
+                    deleted += 1
+                    break
+            except Exception:
+                continue
 
     # 2) delete anything the timeline didn't (base-feature/direct bodies, stray
     #    sketches, construction geometry) so the design is truly empty — otherwise

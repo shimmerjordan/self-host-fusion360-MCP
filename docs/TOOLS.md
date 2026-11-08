@@ -60,6 +60,7 @@ Total tools / 工具总数: **105** (includes the gated `fusion_run_script`).
 | `fusion_list_components` | read-only | — | List all components in the design with their body counts. |
 | `fusion_list_documents` | read-only | — | List all open Fusion documents with their active / modified / saved state. |
 | `fusion_list_faces` | read-only | **body** | List a body's faces (index, area mm², is_planar, centroid, normal). Use a planar face's index to sketch/drill on it (fusion_create_sketch_on_face, fusion_hole with on_body/on_face). |
+| `fusion_list_edges` | read-only | **body** | List a body's edges (index, length mm, start/mid/end points, curve type, adjacent faces). Pick edges by position for fusion_fillet / fusion_chamfer. |
 | `fusion_list_features` | read-only | — | List timeline features in creation order. |
 | `fusion_list_joints` | read-only | — | List joints (name, type), plus as-built-joint and rigid-group counts. |
 | `fusion_list_occurrences` | read-only | — | List component occurrences: name, grounded, visible, body count. |
